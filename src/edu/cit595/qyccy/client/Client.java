@@ -1,5 +1,6 @@
 package edu.cit595.qyccy.client;
 
+import java.awt.EventQueue;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -21,7 +22,7 @@ public class Client {
 
     public Client() {
         cg = new ClientGui();
-        java.awt.EventQueue.invokeLater(new Runnable() {
+        EventQueue.invokeLater(new Runnable() {
             public void run() {
                 cg.setVisible(true);
             }
