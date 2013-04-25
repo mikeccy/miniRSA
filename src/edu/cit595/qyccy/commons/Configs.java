@@ -18,7 +18,7 @@ public enum Configs {
     public final int byteSize = 256;
     public final int byteBit = 8;
 
-    Configs() {
+    private Configs() {
         Properties props = new Properties();
         try {
             props.load(new FileInputStream("configs/configs.properties"));
