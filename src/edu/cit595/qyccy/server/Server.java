@@ -4,11 +4,12 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import edu.cit595.qyccy.commons.Configs;
-import edu.cit595.qyccy.commons.Encryption;
+import edu.cit595.qyccy.common.Configs;
 
 public class Server {
 
@@ -17,7 +18,10 @@ public class Server {
     private ExecutorService executor = null;
     private boolean running = false;
 
+    private int counter = 0;
+
     private ArrayList<Socket> sockets = null;
+    private Map<Integer, ServerConnection> clientMap = new ConcurrentHashMap<Integer, ServerConnection>();
 
     public Server() {
         init();
@@ -28,6 +32,8 @@ public class Server {
             serverSocket = new ServerSocket(configs.serverPort);
             executor = Executors.newFixedThreadPool(configs.maxConnection);
             sockets = new ArrayList<Socket>();
+            System.out.println("Server running @" + configs.serverHost + ":"
+                    + configs.serverPort);
         } catch (IOException e) {
             e.printStackTrace();
             System.exit(-1);
@@ -40,11 +46,10 @@ public class Server {
             try {
                 Socket socket = serverSocket.accept();
                 // negotiate public key
-                Encryption encryption = new Encryption();
                 sockets.add(socket);
-                executor.execute(new ServerConnection(socket, encryption));
+                executor.execute(new ServerConnection(socket, this));
             } catch (IOException e) {
-                e.printStackTrace(); // may still run
+                e.printStackTrace();
                 shutdown();
                 System.exit(-1);
             }
@@ -55,15 +60,27 @@ public class Server {
         try {
             serverSocket.close();
             serverSocket = null;
-            // refactor?
             for (Socket s : sockets)
                 if (s != null)
                     s.close();
             executor.shutdownNow();
         } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(-1);
+            System.out.println("Socket closed");
         }
+    }
+
+    public int addNewClient(final ServerConnection conn) {
+        while (true) {
+            counter += 1;
+            if (!clientMap.containsKey(counter)) {
+                clientMap.put(counter, conn);
+                return counter;
+            }
+        }
+    }
+
+    public final Map<Integer, ServerConnection> getClientMap() {
+        return clientMap;
     }
 
     /**
