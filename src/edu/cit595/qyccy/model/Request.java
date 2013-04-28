@@ -4,5 +4,6 @@ public enum Request {
     EAR,
     CHAT,
     INIT,
-    END;
+    END,
+    UNKN;
 }

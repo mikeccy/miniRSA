@@ -28,14 +28,15 @@ public class Encryption {
     private void init() {
         long rc = c;
         int numBytes = 0;
-        long remain = rc % protocol.byteSize;
+        long remain = c % protocol.byteSize;
         while (true) {
             rc /= protocol.byteSize;
             if (rc > 0 && numBytes != protocol.byteBit) {
                 numBytes++;
             } else {
                 procBytes = (numBytes > 0) ? numBytes : numBytes + 1;
-                sendBytes = (remain == 0) ? numBytes : numBytes + 1;
+                sendBytes = (remain != 0 && numBytes < protocol.byteBit) ? numBytes + 1
+                        : numBytes;
                 break;
             }
         }
@@ -44,14 +45,23 @@ public class Encryption {
     public final byte[] encryptMessage(final String msg)
             throws UnsupportedEncodingException, InvalidKeyException {
         if (e == notSet || c == notSet)
-            new InvalidKeyException("Encryption key not found");
+            throw new InvalidKeyException("Encryption key not found");
         final byte[] msgData = msg.getBytes(protocol.encoding);
-        int sendLength = msgData.length * sendBytes;
+        int sendLength = (int) Math.ceil((double) msgData.length
+                / (double) procBytes)
+                * sendBytes;
         final byte[] sendData = new byte[sendLength];
         for (int i = 0; i < msgData.length; i += procBytes) {
             long reGrouped = 0;
             for (int j = 0; j < procBytes; j++) {
-                reGrouped += (msgData[i + j] & 0xFF) << (protocol.byteBit * j);
+                int index = i + j;
+                byte data;
+                if (index < msgData.length) {
+                    data = msgData[i + j];
+                } else {
+                    data = 0;
+                }
+                reGrouped += (data & 0xFF) << (protocol.byteBit * j);
             }
             long toSend = RSA.encrypt(reGrouped, e, c);
             int startIndex = i / procBytes * sendBytes;
@@ -71,7 +81,7 @@ public class Encryption {
             return "";
         if (msgLength % sendBytes != 0 || msgLength < 0
                 || offset > msgData.length)
-            new InvalidDataFormatException("Received message corrupted");
+            throw new InvalidDataFormatException("Received message corrupted");
         if (!decrypt) {
             // return raw data
             StringBuilder sb = new StringBuilder();
@@ -82,10 +92,9 @@ public class Encryption {
             return sb.toString();
         }
         if (d == notSet || c == notSet)
-            new InvalidKeyException("Decryption key not found");
-        
-        
-        int predMsgLength = msgLength / sendBytes;
+            throw new InvalidKeyException("Decryption key not found");
+
+        int predMsgLength = msgLength / sendBytes * procBytes;
         byte[] recvData = new byte[predMsgLength];
         for (int i = 0; i < msgLength; i += sendBytes) {
             long reGrouped = 0;
@@ -109,5 +118,17 @@ public class Encryption {
 
     public final long getC() {
         return c;
+    }
+
+    public final long getD() {
+        return d;
+    }
+
+    public boolean crackedD(final long d) {
+        if (this.d == notSet) {
+            this.d = d;
+            return true;
+        }
+        return false;
     }
 }

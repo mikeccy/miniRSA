@@ -26,9 +26,6 @@ public class Connection {
     final byte[] recvBuff = new byte[protocol.recvBuffSize];
 
     public Connection(final Socket socket) throws IOException {
-        if (encryption == null) {
-            new RuntimeException("Encryption should not be null");
-        }
         this.socket = socket;
         if (socket != null) {
             if (socket.isConnected()) {
@@ -36,7 +33,7 @@ public class Connection {
                 return;
             }
         }
-        new UnknownHostException();
+        throw new UnknownHostException();
     }
 
     public Connection(final String serverHost, final int serverPort,
@@ -44,7 +41,7 @@ public class Connection {
             IOException {
         this.encryption = encryption;
         if (encryption == null) {
-            new RuntimeException("Encryption should not be null");
+            throw new RuntimeException("Encryption should not be null");
         }
         socket = new Socket(serverHost, serverPort);
         init();
@@ -59,6 +56,16 @@ public class Connection {
             throws UnsupportedEncodingException, IOException,
             InvalidKeyException {
         sendMessage(header, "");
+    }
+
+    public void sendMessage(final Header header, final byte[] msgData)
+            throws IOException {
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        byteStream.write(header.raw.getBytes());
+        if (msgData.length > 0)
+            byteStream.write(msgData);
+        final byte[] data = byteStream.toByteArray();
+        socketOutput.write(data, 0, data.length);
     }
 
     public void sendMessage(final Header header, final String msg)
@@ -83,11 +90,8 @@ public class Connection {
         bytesRead = socketInput.read(recvBuff, 0, protocol.recvBuffSize);
         Message msg = new Message();
         if (bytesRead > 0) {
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            byteStream.write(recvBuff);
-            msg.raw = byteStream.toByteArray();
-            //String headerMsg = new String(recvBuff, protocol.encoding);
-            String headerMsg = new String(recvBuff, 0, bytesRead, protocol.encoding);
+            String headerMsg = new String(recvBuff, 0, bytesRead,
+                    protocol.encoding);
             String header = headerMsg.substring(0,
                     headerMsg.lastIndexOf(protocol.endHeader)
                             + protocol.endHeader.length());
@@ -99,10 +103,14 @@ public class Connection {
             } else {
                 msg.content = "";
             }
-
+            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            byteStream.write(recvBuff, headerLength, bytesRead - headerLength);
+            msg.rawContent = byteStream.toByteArray();
+        } else if (bytesRead == -1) {
+            throw new IOException("End of socket");
         } else {
             // no data or end of stream
-            new InvalidDataFormatException("No data received");
+            throw new InvalidDataFormatException("No data received");
         }
         return msg;
     }

@@ -18,7 +18,9 @@ public enum Protocol {
     public final String clientInfo = "Client-info:";
     public final String currentClients = "Current-clients:";
 
-    public final String endHeader = "\r\n\r\n";
+    public final String errorMsg = "Error-msg:";
+
+    public final String endHeader = "\r\n";
 
     public final String encoding = "UTF-8";
     public final int recvBuffSize = 1024;
@@ -61,12 +63,48 @@ public enum Protocol {
         return header;
     }
 
+    public final Header requestEar(final String target) {
+        final Header header = new Header();
+        StringBuilder sb = new StringBuilder();
+        sb.append(name);
+        sb.append(sep);
+        sb.append(Request.EAR.toString());
+        sb.append(endLine);
+
+        sb.append(clientInfo);
+        sb.append(sep);
+        sb.append(target);
+        sb.append(endLine);
+
+        sb.append(endHeader);
+        header.raw = sb.toString();
+        return header;
+    }
+
     public final Header requestEnd() {
         final Header header = new Header();
         StringBuilder sb = new StringBuilder();
         sb.append(name);
         sb.append(sep);
         sb.append(Request.END.toString());
+        sb.append(endLine);
+
+        sb.append(endHeader);
+        header.raw = sb.toString();
+        return header;
+    }
+
+    public final Header respondBad(final String client, final String error) {
+        final Header header = new Header();
+        StringBuilder sb = new StringBuilder();
+        sb.append(name);
+        sb.append(sep);
+        sb.append(Respond.BAD);
+        sb.append(endLine);
+
+        sb.append(errorMsg);
+        sb.append(sep);
+        sb.append(error);
         sb.append(endLine);
 
         sb.append(endHeader);
@@ -86,12 +124,37 @@ public enum Protocol {
         sb.append(sep);
         sb.append(client);
         sb.append(endLine);
-        
+
         sb.append(endHeader);
         header.raw = sb.toString();
         return header;
     }
-    
+
+    public final Header forward(final String client, final long e, final long c) {
+        final Header header = new Header();
+        StringBuilder sb = new StringBuilder();
+        sb.append(name);
+        sb.append(sep);
+        sb.append(Respond.FWD);
+        sb.append(endLine);
+
+        sb.append(clientInfo);
+        sb.append(sep);
+        sb.append(client);
+        sb.append(endLine);
+
+        sb.append(pubKey);
+        sb.append(sep);
+        sb.append(e);
+        sb.append(sep);
+        sb.append(c);
+        sb.append(endLine);
+
+        sb.append(endHeader);
+        header.raw = sb.toString();
+        return header;
+    }
+
     public final Header broadcastClientInfo(final Set<Integer> clients) {
         final Header header = new Header();
         StringBuilder sb = new StringBuilder();
@@ -99,14 +162,14 @@ public enum Protocol {
         sb.append(sep);
         sb.append(Respond.UPDT);
         sb.append(endLine);
-        
+
         sb.append(currentClients);
-        for(Integer i : clients) {
+        for (Integer i : clients) {
             sb.append(sep);
             sb.append(i);
         }
         sb.append(endLine);
-        
+
         sb.append(endHeader);
         header.raw = sb.toString();
         return header;

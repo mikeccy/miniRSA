@@ -21,7 +21,7 @@ public class Server {
     private int counter = 0;
 
     private ArrayList<Socket> sockets = null;
-    private Map<Integer, ServerConnection> clientMap = new ConcurrentHashMap<Integer, ServerConnection>();
+    private Map<Integer, ClientStatus> clientMap = new ConcurrentHashMap<Integer, ClientStatus>();
 
     public Server() {
         init();
@@ -69,17 +69,17 @@ public class Server {
         }
     }
 
-    public int addNewClient(final ServerConnection conn) {
+    public int addNewClient(final ClientStatus client) {
         while (true) {
             counter += 1;
             if (!clientMap.containsKey(counter)) {
-                clientMap.put(counter, conn);
+                clientMap.put(counter, client);
                 return counter;
             }
         }
     }
 
-    public final Map<Integer, ServerConnection> getClientMap() {
+    public final Map<Integer, ClientStatus> getClientMap() {
         return clientMap;
     }
 
